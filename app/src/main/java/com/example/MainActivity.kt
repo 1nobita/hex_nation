@@ -21,6 +21,7 @@ import com.example.ui.HexCanvasScreen
 import com.example.viewmodel.MainViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.graphics.Color
+import com.example.ui.UserProfileScreen
 
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,9 +58,12 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
   NavHost(navController = navController, startDestination = "login") {
     composable("login") {
       LoginScreen(
-        onLoginSuccess = { navController.navigate("nation_select") {
-          popUpTo("login") { inclusive = true }
-        } }
+        onLoginSuccess = { email -> 
+          viewModel.login(email)
+          navController.navigate("nation_select") {
+            popUpTo("login") { inclusive = true }
+          }
+        }
       )
     }
     composable("nation_select") {
@@ -67,6 +71,22 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
         onNationSelected = { nation ->
           viewModel.selectNation(nation)
           navController.navigate("canvas")
+        },
+        onProfileClicked = {
+          navController.navigate("profile")
+        }
+      )
+    }
+    composable("profile") {
+      val currentProfile by viewModel.currentProfile.collectAsStateWithLifecycle()
+      val ownedHexagons by viewModel.ownedHexagons.collectAsStateWithLifecycle()
+      
+      UserProfileScreen(
+        profile = currentProfile,
+        ownedHexagons = ownedHexagons,
+        onBack = { navController.popBackStack() },
+        onSaveProfile = { origin, bio -> 
+          viewModel.updateUserProfile(origin, bio)
         }
       )
     }

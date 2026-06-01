@@ -12,9 +12,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(onLoginSuccess: (String) -> Unit) {
+    var email by remember { mutableStateOf("") }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -37,11 +42,21 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(48.dp))
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email Address") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
             Button(
-                onClick = onLoginSuccess,
+                onClick = {
+                    val finalEmail = email.takeIf { it.isNotBlank() } ?: "nieemanwary01@gmail.com"
+                    onLoginSuccess(finalEmail)
+                },
                 modifier = Modifier.fillMaxWidth().height(56.dp)
             ) {
-                Text("Sign in with Google", style = MaterialTheme.typography.titleMedium)
+                Text("Sign in", style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -49,13 +64,18 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NationSelectionScreen(onNationSelected: (String) -> Unit) {
+fun NationSelectionScreen(onNationSelected: (String) -> Unit, onProfileClicked: () -> Unit) {
     val nations = listOf("United States", "Canada", "Brazil", "United Kingdom", "France", "Germany", "India", "Japan", "Australia", "Global Grid")
     
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Select Area") },
+                actions = {
+                    IconButton(onClick = onProfileClicked) {
+                        Icon(Icons.Filled.Person, contentDescription = "Profile")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 )

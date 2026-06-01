@@ -13,6 +13,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.Job
 
+import com.example.data.UserProfile
+import com.example.data.HexOwnershipLog
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: HexRepository
     
@@ -21,6 +24,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository = HexRepository(db)
     }
 
+    private val _currentUser = MutableStateFlow<String?>("user@gmail.com") // mocked authenticated user
+    val currentUser: StateFlow<String?> = _currentUser.asStateFlow()
+
+    private val _currentProfile = MutableStateFlow<UserProfile?>(null)
+    val currentProfile: StateFlow<UserProfile?> = _currentProfile.asStateFlow()
+
+    private val _ownedHexagons = MutableStateFlow<List<Hexagon>>(emptyList())
+    val ownedHexagons: StateFlow<List<Hexagon>> = _ownedHexagons.asStateFlow()
+
     private val _currentNation = MutableStateFlow<String?>("Global")
     val currentNation: StateFlow<String?> = _currentNation.asStateFlow()
 
@@ -28,6 +40,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val hexagons: StateFlow<List<Hexagon>> = _hexagons.asStateFlow()
     
     private var hexJob: Job? = null
+    private var profileJob: Job? = null
+    private var ownedHexJob: Job? = null
+
+    fun login(email: String) {
+        _currentUser.value = email
+        observeUserProfile(email)
+        observeOwnedHexagons(email)
+        // Ensure profile exists
+        viewModelScope.launch {
+            repository.insertUserProfile(UserProfile(userId = email, placeOfOrigin = "Internet", bio = "I love coloring hexagons!"))
+        }
+    }
+    
+    private fun observeUserProfile(userId: String) {
+        profileJob?.cancel()
+        profileJob = viewModelScope.launch {
+            repository.getUserProfile(userId).collectLatest { profile ->
+                _currentProfile.value = profile
+            }
+        }
+    }
+
+    private fun observeOwnedHexagons(userId: String) {
+        ownedHexJob?.cancel()
+        ownedHexJob = viewModelScope.launch {
+            repository.getOwnedHexagons(userId).collectLatest { list ->
+                _ownedHexagons.value = list
+            }
+        }
+    }
+
+    fun updateUserProfile(placeOfOrigin: String, bio: String) {
+        val userId = _currentUser.value ?: return
+        viewModelScope.launch {
+            val curr = _currentProfile.value ?: UserProfile(userId = userId)
+            repository.insertUserProfile(curr.copy(placeOfOrigin = placeOfOrigin, bio = bio))
+        }
+    }
 
     fun selectNation(nationId: String) {
         _currentNation.value = nationId
@@ -41,17 +91,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun purchaseHexagon(q: Int, r: Int, color: Long) {
         val nation = _currentNation.value ?: return
+        val currentUserId = _currentUser.value ?: return
+        val timeNow = System.currentTimeMillis()
+        
         viewModelScope.launch {
             val existing = repository.getHexagon(nation, q, r)
+            
+            if (existing != null) {
+                // calculate duration for previous owner
+                val duration = (timeNow - existing.lastPurchaseTimestamp) / 1000
+                val log = HexOwnershipLog(
+                    nationId = nation,
+                    q = q,
+                    r = r,
+                    ownerId = existing.ownerId,
+                    acquiredAt = existing.lastPurchaseTimestamp,
+                    durationSeconds = duration
+                )
+                repository.insertHexOwnershipLog(log)
+            }
+
             val flips = (existing?.numFlips ?: 0) + 1
             val hex = Hexagon(
                 nationId = nation,
                 q = q,
                 r = r,
                 color = color,
-                ownerId = "currentUser",
+                ownerId = currentUserId,
                 numFlips = flips,
-                lastPurchaseTimestamp = System.currentTimeMillis()
+                lastPurchaseTimestamp = timeNow
             )
             repository.insertHexagon(hex)
         }
