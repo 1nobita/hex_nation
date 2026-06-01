@@ -154,15 +154,10 @@ fun HexCanvasScreen(
             val prompt = "$iconicPlace, $nationName, beautiful iconic professional photography"
             val imageUrl = remember(prompt) { "https://image.pollinations.ai/prompt/${URLEncoder.encode(prompt, "UTF-8")}" }
             
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "Background",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+            val painter = coil.compose.rememberAsyncImagePainter(model = imageUrl)
 
-            val defaultStroke = remember { Stroke(width = 2f) }
-            val selectedStroke = remember { Stroke(width = 4f) }
+            val defaultStroke = remember { Stroke(width = 3f) }
+            val selectedStroke = remember { Stroke(width = 6f) }
 
             Canvas(
                 modifier = Modifier
@@ -207,14 +202,34 @@ fun HexCanvasScreen(
                         val rowHeight = hexSize * 1.5f
                         val colWidth = hexSize * HexMath.SQRT_3
                         
-                        val minR = (startY / rowHeight).toInt() - 2
-                        val maxR = (endY / rowHeight).toInt() + 2
+                        val gridWidth = 1000 * colWidth
+                        val gridHeight = 1000 * rowHeight
                         
-                        val minQ = (startX / colWidth).toInt() - 2
-                        val maxQ = (endX / colWidth).toInt() + 2
+                        try {
+                            with(painter) {
+                                draw(size = androidx.compose.ui.geometry.Size(gridWidth, gridHeight))
+                            }
+                        } catch (e: Exception) {
+                            // ignore painter errors
+                        }
+                        
+                        var minR = ((startY / rowHeight).toInt() - 2).coerceIn(0, 999)
+                        var maxR = ((endY / rowHeight).toInt() + 2).coerceIn(0, 999)
+                        
+                        var minQ = ((startX / colWidth).toInt() - 2)
+                        var maxQ = ((endX / colWidth).toInt() + 2)
                         
                         for (r in minR..maxR) {
-                            for (q in (minQ - (r/2)-1)..(maxQ - (r/2) + 2)) {
+                            val rOffset = r / 2
+                            val boundStart = 0 - rOffset
+                            val boundEnd = 999 - rOffset
+                            
+                            val qStart = (minQ - rOffset - 1).coerceIn(boundStart, boundEnd)
+                            val qEnd = (maxQ - rOffset + 2).coerceIn(boundStart, boundEnd)
+                            
+                            if (qStart > qEnd) continue
+
+                            for (q in qStart..qEnd) {
                                 val center = HexMath.hexToPixel(q, r, hexSize)
                                 
                                 val key = (q.toLong() shl 32) or (r.toLong() and 0xFFFFFFFFL)
@@ -224,10 +239,10 @@ fun HexCanvasScreen(
                                 translate(center.x, center.y) {
                                     if (userHex != null) {
                                         drawPath(basePath, Color(userHex.color.toInt()).copy(alpha = 0.85f))
-                                        drawPath(basePath, Color.White.copy(alpha = 0.5f), style = defaultStroke)
+                                        drawPath(basePath, Color.White.copy(alpha = 0.7f), style = defaultStroke)
                                     } else {
                                         drawPath(basePath, Color.Black.copy(alpha = 0.35f))
-                                        drawPath(basePath, Color.White.copy(alpha = 0.4f), style = defaultStroke)
+                                        drawPath(basePath, Color.White.copy(alpha = 0.6f), style = defaultStroke)
                                     }
                                     
                                     if (isSelected) {
