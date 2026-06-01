@@ -161,6 +161,7 @@ fun HexCanvasScreen(
             ) {
                 val width = size.width
                 val height = size.height
+                if (width.isNaN() || height.isNaN() || width <= 0f || height <= 0f) return@Canvas
 
                 val startX = (-offset.x) / scale
                 val startY = (-offset.y) / scale
@@ -248,7 +249,7 @@ fun HexCanvasScreen(
                     val flips = existingHex?.numFlips ?: 0
                     val basePrice = 1.0
                     val price = basePrice * (1.1).pow(flips.toDouble())
-                    val formatter = NumberFormat.getCurrencyInstance(Locale.US)
+                    val formatter = remember { NumberFormat.getCurrencyInstance(Locale.US) }
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(),

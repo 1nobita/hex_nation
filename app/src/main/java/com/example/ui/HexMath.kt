@@ -27,6 +27,7 @@ object HexMath {
     }
 
     private fun axialRound(q: Float, r: Float): HexCoord {
+        if (q.isNaN() || r.isNaN()) return HexCoord(0, 0)
         val s = -q - r
         var rq = q.roundToInt()
         var rr = r.roundToInt()
