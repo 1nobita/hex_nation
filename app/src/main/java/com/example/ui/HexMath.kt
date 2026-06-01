@@ -42,13 +42,13 @@ object HexMath {
         return HexCoord(rq, rr)
     }
 
-    fun getHexagonPath(center: Offset, size: Float): Path {
+    fun getBaseHexagonPath(size: Float): Path {
         val path = Path()
         for (i in 0..5) {
             val angleDeg = 60.0 * i - 30.0
             val angleRad = Math.PI / 180.0 * angleDeg
-            val x = center.x + size * cos(angleRad).toFloat()
-            val y = center.y + size * sin(angleRad).toFloat()
+            val x = size * cos(angleRad).toFloat()
+            val y = size * sin(angleRad).toFloat()
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
         path.close()

@@ -44,6 +44,7 @@ fun HexCanvasScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset(200f, 200f)) }
     val hexSize = 35f
+    val basePath = remember(hexSize) { HexMath.getBaseHexagonPath(hexSize * 0.92f) }
     
     val hexMap = remember(hexagons) {
         hexagons.associateBy { Pair(it.q, it.r) }
@@ -171,19 +172,20 @@ fun HexCanvasScreen(
                         for (r in minR..maxR) {
                             for (q in (minQ - (r/2)-1)..(maxQ - (r/2) + 2)) {
                                 val center = HexMath.hexToPixel(q, r, hexSize)
-                                val path = HexMath.getHexagonPath(center, hexSize * 0.92f)
                                 
                                 val userHex = hexMap[Pair(q, r)]
                                 val isSelected = selectedHex?.first == q && selectedHex?.second == r
                                 
-                                if (userHex != null) {
-                                    drawPath(path, Color(userHex.color.toULong()))
-                                } else {
-                                    drawPath(path, borderColor, style = Stroke(width = 1f))
-                                }
-                                
-                                if (isSelected) {
-                                    drawPath(path, accentPurple, style = Stroke(width = 3f))
+                                translate(center.x, center.y) {
+                                    if (userHex != null) {
+                                        drawPath(basePath, Color(userHex.color.toULong()))
+                                    } else {
+                                        drawPath(basePath, borderColor, style = Stroke(width = 1f))
+                                    }
+                                    
+                                    if (isSelected) {
+                                        drawPath(basePath, accentPurple, style = Stroke(width = 3f))
+                                    }
                                 }
                             }
                         }
@@ -223,7 +225,7 @@ fun HexCanvasScreen(
                 .fillMaxWidth()
                 .background(bgScreen)
         ) {
-            Divider(color = borderColor, thickness = 1.dp)
+            HorizontalDivider(color = borderColor, thickness = 1.dp)
             Column(modifier = Modifier.padding(16.dp)) {
                 if (selectedHex != null) {
                     val (q, r) = selectedHex!!
