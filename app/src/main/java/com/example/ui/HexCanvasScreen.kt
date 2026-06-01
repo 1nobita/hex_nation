@@ -178,7 +178,7 @@ fun HexCanvasScreen(
                                 
                                 translate(center.x, center.y) {
                                     if (userHex != null) {
-                                        drawPath(basePath, Color(userHex.color.toULong()))
+                                        drawPath(basePath, Color(userHex.color.toInt()))
                                     } else {
                                         drawPath(basePath, borderColor, style = Stroke(width = 1f))
                                     }
