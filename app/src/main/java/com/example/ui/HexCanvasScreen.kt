@@ -155,27 +155,27 @@ fun HexCanvasScreen(
             val prompt = "$iconicPlace, $nationName, beautiful iconic professional photography"
             val imageUrl = remember(prompt) { "https://image.pollinations.ai/prompt/${URLEncoder.encode(prompt, "UTF-8")}" }
             
-            val gridWidth = 1000 * hexSize * HexMath.SQRT_3
-            val gridHeight = 1000 * hexSize * 1.5f
+            val context = androidx.compose.ui.platform.LocalContext.current
+            var imageBitmap by remember(imageUrl) { androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
             
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = "Background",
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        translationX = offset.x
-                        translationY = offset.y
-                        
-                        if (size.width > 0 && size.height > 0) {
-                            scaleX = (gridWidth * scale) / size.width
-                            scaleY = (gridHeight * scale) / size.height
+            androidx.compose.runtime.LaunchedEffect(imageUrl) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        val request = coil.request.ImageRequest.Builder(context)
+                            .data(imageUrl)
+                            .allowHardware(false)
+                            .build()
+                        val loader = coil.ImageLoader(context)
+                        val result = loader.execute(request)
+                        val drawable = result.drawable
+                        if (drawable is android.graphics.drawable.BitmapDrawable) {
+                            imageBitmap = drawable.bitmap.asImageBitmap()
                         }
-                        
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-            )
+                }
+            }
 
             val defaultStroke = remember { Stroke(width = 3f) }
             val selectedStroke = remember { Stroke(width = 6f) }
@@ -218,46 +218,89 @@ fun HexCanvasScreen(
                 val endX = (width - offset.x) / scale
                 val endY = (height - offset.y) / scale
                 
-                translate(offset.x, offset.y) {
-                    scale(scale, scale, Offset.Zero) {
-                        val rowHeight = hexSize * 1.5f
-                        val colWidth = hexSize * HexMath.SQRT_3
+                if (imageBitmap != null) {
+                    val bmp = imageBitmap!!
+                    val gridWidth = 1000 * hexSize * HexMath.SQRT_3
+                    val gridHeight = 1000 * hexSize * 1.5f
+                    
+                    val gridScreenLeft = offset.x
+                    val gridScreenTop = offset.y
+                    val gridScreenRight = offset.x + gridWidth * scale
+                    val gridScreenBottom = offset.y + gridHeight * scale
+                    
+                    val visibleDstRect = androidx.compose.ui.unit.IntRect(
+                        left = maxOf(0f, gridScreenLeft).toInt(),
+                        top = maxOf(0f, gridScreenTop).toInt(),
+                        right = minOf(width, gridScreenRight).toInt(),
+                        bottom = minOf(height, gridScreenBottom).toInt()
+                    )
+                    
+                    if (visibleDstRect.width > 0 && visibleDstRect.height > 0) {
+                        val srcLeft = (((visibleDstRect.left - gridScreenLeft) / (gridWidth * scale)) * bmp.width).toInt()
+                        val srcTop = (((visibleDstRect.top - gridScreenTop) / (gridHeight * scale)) * bmp.height).toInt()
+                        val srcRight = (((visibleDstRect.right - gridScreenLeft) / (gridWidth * scale)) * bmp.width).toInt()
+                        val srcBottom = (((visibleDstRect.bottom - gridScreenTop) / (gridHeight * scale)) * bmp.height).toInt()
                         
-                        var minR = ((startY / rowHeight).toInt() - 2).coerceIn(0, 999)
-                        var maxR = ((endY / rowHeight).toInt() + 2).coerceIn(0, 999)
+                        val visibleSrcRect = androidx.compose.ui.unit.IntRect(
+                            left = srcLeft.coerceIn(0, bmp.width),
+                            top = srcTop.coerceIn(0, bmp.height),
+                            right = srcRight.coerceIn(0, bmp.width),
+                            bottom = srcBottom.coerceIn(0, bmp.height)
+                        )
                         
-                        var minQ = ((startX / colWidth).toInt() - 2)
-                        var maxQ = ((endX / colWidth).toInt() + 2)
-                        
-                        for (r in minR..maxR) {
-                            val rOffset = r / 2
-                            val boundStart = 0 - rOffset
-                            val boundEnd = 999 - rOffset
-                            
-                            val qStart = (minQ - rOffset - 1).coerceIn(boundStart, boundEnd)
-                            val qEnd = (maxQ - rOffset + 2).coerceIn(boundStart, boundEnd)
-                            
-                            if (qStart > qEnd) continue
+                        if (visibleSrcRect.width > 0 && visibleSrcRect.height > 0) {
+                            drawImage(
+                                image = bmp,
+                                srcOffset = androidx.compose.ui.unit.IntOffset(visibleSrcRect.left, visibleSrcRect.top),
+                                srcSize = androidx.compose.ui.unit.IntSize(visibleSrcRect.width, visibleSrcRect.height),
+                                dstOffset = androidx.compose.ui.unit.IntOffset(visibleDstRect.left, visibleDstRect.top),
+                                dstSize = androidx.compose.ui.unit.IntSize(visibleDstRect.width, visibleDstRect.height)
+                            )
+                        }
+                    }
+                }
 
-                            for (q in qStart..qEnd) {
-                                val center = HexMath.hexToPixel(q, r, hexSize)
+                val rowHeight = hexSize * 1.5f
+                val colWidth = hexSize * HexMath.SQRT_3
+                
+                var minR = ((startY / rowHeight).toInt() - 2).coerceIn(0, 999)
+                var maxR = ((endY / rowHeight).toInt() + 2).coerceIn(0, 999)
+                
+                var minQ = ((startX / colWidth).toInt() - 2)
+                var maxQ = ((endX / colWidth).toInt() + 2)
+                
+                for (r in minR..maxR) {
+                    val rOffset = r / 2
+                    val boundStart = 0 - rOffset
+                    val boundEnd = 999 - rOffset
+                    
+                    val qStart = (minQ - rOffset - 1).coerceIn(boundStart, boundEnd)
+                    val qEnd = (maxQ - rOffset + 2).coerceIn(boundStart, boundEnd)
+                    
+                    if (qStart > qEnd) continue
+
+                    for (q in qStart..qEnd) {
+                        val center = HexMath.hexToPixel(q, r, hexSize)
+                        
+                        val key = (q.toLong() shl 32) or (r.toLong() and 0xFFFFFFFFL)
+                        val userHex = hexMap[key]
+                        val isSelected = hasSelection && selectedQ == q && selectedR == r
+                        
+                        val screenX = offset.x + center.x * scale
+                        val screenY = offset.y + center.y * scale
+                        
+                        translate(screenX, screenY) {
+                            scale(scale, scale, Offset.Zero) {
+                                if (userHex != null) {
+                                    drawPath(basePath, Color(userHex.color.toInt()).copy(alpha = 0.85f))
+                                    drawPath(basePath, Color.White.copy(alpha = 0.7f), style = defaultStroke)
+                                } else {
+                                    drawPath(basePath, Color.Black.copy(alpha = 0.35f))
+                                    drawPath(basePath, Color.White.copy(alpha = 0.6f), style = defaultStroke)
+                                }
                                 
-                                val key = (q.toLong() shl 32) or (r.toLong() and 0xFFFFFFFFL)
-                                val userHex = hexMap[key]
-                                val isSelected = hasSelection && selectedQ == q && selectedR == r
-                                
-                                translate(center.x, center.y) {
-                                    if (userHex != null) {
-                                        drawPath(basePath, Color(userHex.color.toInt()).copy(alpha = 0.85f))
-                                        drawPath(basePath, Color.White.copy(alpha = 0.7f), style = defaultStroke)
-                                    } else {
-                                        drawPath(basePath, Color.Black.copy(alpha = 0.35f))
-                                        drawPath(basePath, Color.White.copy(alpha = 0.6f), style = defaultStroke)
-                                    }
-                                    
-                                    if (isSelected) {
-                                        drawPath(basePath, accentPurple, style = selectedStroke)
-                                    }
+                                if (isSelected) {
+                                    drawPath(basePath, accentPurple, style = selectedStroke)
                                 }
                             }
                         }
