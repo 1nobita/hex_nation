@@ -47,10 +47,12 @@ fun HexCanvasScreen(
     val basePath = remember(hexSize) { HexMath.getBaseHexagonPath(hexSize * 0.92f) }
     
     val hexMap = remember(hexagons) {
-        hexagons.associateBy { Pair(it.q, it.r) }
+        hexagons.associateBy { (it.q.toLong() shl 32) or (it.r.toLong() and 0xFFFFFFFFL) }
     }
 
-    var selectedHex by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var selectedQ by remember { mutableIntStateOf(0) }
+    var selectedR by remember { mutableIntStateOf(0) }
+    var hasSelection by remember { mutableStateOf(false) }
     var selectedPaintColor by remember { mutableStateOf(Color(0xFFFF3B30)) }
     val colorPalette = listOf(
         Color(0xFFFF3B30), Color(0xFFFF9500), Color(0xFFFFCC00), Color(0xFF4CD964),
@@ -140,18 +142,20 @@ fun HexCanvasScreen(
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput("transform") {
+                    .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
                             scale = (scale * zoom).coerceIn(0.4f, 5f)
                             offset += pan
                         }
                     }
-                    .pointerInput("tap") {
+                    .pointerInput(Unit) {
                         detectTapGestures { tapLoc ->
                             val tapX = (tapLoc.x - offset.x) / scale
                             val tapY = (tapLoc.y - offset.y) / scale
                             val hexCoord = HexMath.pixelToHex(tapX, tapY, hexSize)
-                            selectedHex = Pair(hexCoord.q, hexCoord.r)
+                            selectedQ = hexCoord.q
+                            selectedR = hexCoord.r
+                            hasSelection = true
                         }
                     }
             ) {
@@ -162,6 +166,9 @@ fun HexCanvasScreen(
                 val startY = (-offset.y) / scale
                 val endX = (width - offset.x) / scale
                 val endY = (height - offset.y) / scale
+                
+                val defaultStroke = Stroke(width = 1f)
+                val selectedStroke = Stroke(width = 3f)
 
                 translate(offset.x, offset.y) {
                     scale(scale, scale, Offset.Zero) {
@@ -178,18 +185,19 @@ fun HexCanvasScreen(
                             for (q in (minQ - (r/2)-1)..(maxQ - (r/2) + 2)) {
                                 val center = HexMath.hexToPixel(q, r, hexSize)
                                 
-                                val userHex = hexMap[Pair(q, r)]
-                                val isSelected = selectedHex?.first == q && selectedHex?.second == r
+                                val key = (q.toLong() shl 32) or (r.toLong() and 0xFFFFFFFFL)
+                                val userHex = hexMap[key]
+                                val isSelected = hasSelection && selectedQ == q && selectedR == r
                                 
                                 translate(center.x, center.y) {
                                     if (userHex != null) {
                                         drawPath(basePath, Color(userHex.color.toInt()))
                                     } else {
-                                        drawPath(basePath, borderColor, style = Stroke(width = 1f))
+                                        drawPath(basePath, borderColor, style = defaultStroke)
                                     }
                                     
                                     if (isSelected) {
-                                        drawPath(basePath, accentPurple, style = Stroke(width = 3f))
+                                        drawPath(basePath, accentPurple, style = selectedStroke)
                                     }
                                 }
                             }
@@ -232,9 +240,11 @@ fun HexCanvasScreen(
         ) {
             HorizontalDivider(color = borderColor, thickness = 1.dp)
             Column(modifier = Modifier.padding(16.dp)) {
-                if (selectedHex != null) {
-                    val (q, r) = selectedHex!!
-                    val existingHex = hexMap[Pair(q, r)]
+                if (hasSelection) {
+                    val q = selectedQ
+                    val r = selectedR
+                    val key = (q.toLong() shl 32) or (r.toLong() and 0xFFFFFFFFL)
+                    val existingHex = hexMap[key]
                     val flips = existingHex?.numFlips ?: 0
                     val basePrice = 1.0
                     val price = basePrice * (1.1).pow(flips.toDouble())
@@ -288,7 +298,7 @@ fun HexCanvasScreen(
                         Button(
                             onClick = { 
                                 onPurchaseAction(q, r, selectedPaintColor.toArgb().toLong())
-                                selectedHex = null
+                                hasSelection = false
                             },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             shape = RoundedCornerShape(16.dp),
@@ -297,7 +307,7 @@ fun HexCanvasScreen(
                             Text("Buy & Paint", fontWeight = FontWeight.Bold)
                         }
                         Button(
-                            onClick = { selectedHex = null },
+                            onClick = { hasSelection = false },
                             modifier = Modifier.width(56.dp).fillMaxHeight(),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = borderColor, contentColor = textPrimary),

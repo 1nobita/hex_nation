@@ -6,6 +6,8 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.math.roundToInt
+import kotlin.math.abs
+import kotlin.math.PI
 
 data class HexCoord(val q: Int, val r: Int)
 
@@ -19,9 +21,9 @@ object HexMath {
     }
 
     fun pixelToHex(x: Float, y: Float, size: Float): HexCoord {
-        val qFloat = (Math.sqrt(3.0) / 3 * x - 1.0 / 3 * y) / size
-        val rFloat = (2.0 / 3 * y) / size
-        return axialRound(qFloat.toFloat(), rFloat.toFloat())
+        val qFloat = (SQRT_3 / 3f * x - 1f / 3f * y) / size
+        val rFloat = (2f / 3f * y) / size
+        return axialRound(qFloat, rFloat)
     }
 
     private fun axialRound(q: Float, r: Float): HexCoord {
@@ -30,9 +32,9 @@ object HexMath {
         var rr = r.roundToInt()
         var rs = s.roundToInt()
 
-        val qDiff = Math.abs(rq - q)
-        val rDiff = Math.abs(rr - r)
-        val sDiff = Math.abs(rs - s)
+        val qDiff = abs(rq - q)
+        val rDiff = abs(rr - r)
+        val sDiff = abs(rs - s)
 
         if (qDiff > rDiff && qDiff > sDiff) {
             rq = -rr - rs
@@ -46,7 +48,7 @@ object HexMath {
         val path = Path()
         for (i in 0..5) {
             val angleDeg = 60.0 * i - 30.0
-            val angleRad = Math.PI / 180.0 * angleDeg
+            val angleRad = PI / 180.0 * angleDeg
             val x = size * cos(angleRad).toFloat()
             val y = size * sin(angleRad).toFloat()
             if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
