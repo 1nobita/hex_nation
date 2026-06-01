@@ -51,6 +51,11 @@ fun HexCanvasScreen(
     }
 
     var selectedHex by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var selectedPaintColor by remember { mutableStateOf(Color(0xFFFF3B30)) }
+    val colorPalette = listOf(
+        Color(0xFFFF3B30), Color(0xFFFF9500), Color(0xFFFFCC00), Color(0xFF4CD964),
+        Color(0xFF5AC8FA), Color(0xFF007AFF), Color(0xFF5856D6), Color(0xFFFF2D55)
+    )
     
     // Theme Colors
     val bgScreen = Color(0xFF1C1B1F)
@@ -256,11 +261,33 @@ fun HexCanvasScreen(
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
+                    Text("CHOOSE PAINT COLOR", color = Color(0xFFCAC4D0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        colorPalette.forEach { color ->
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(color, CircleShape)
+                                    .border(
+                                        2.dp,
+                                        if (selectedPaintColor == color) Color.White else Color.Transparent,
+                                        CircleShape
+                                    )
+                                    .clickable { selectedPaintColor = color }
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
                     Row(modifier = Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
                             onClick = { 
-                                val colors = listOf(Color.Red, Color.Blue, Color.Green, Color.Cyan, Color.Magenta, Color.Yellow, Color(0xFFFF5722))
-                                onPurchaseAction(q, r, colors.random().toArgb().toLong())
+                                onPurchaseAction(q, r, selectedPaintColor.toArgb().toLong())
                                 selectedHex = null
                             },
                             modifier = Modifier.weight(1f).fillMaxHeight(),
