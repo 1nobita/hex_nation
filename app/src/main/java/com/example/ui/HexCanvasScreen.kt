@@ -158,19 +158,11 @@ fun HexCanvasScreen(
                 model = imageUrl,
                 contentDescription = "Background",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        translationX = offset.x
-                        translationY = offset.y
-                        scaleX = scale
-                        scaleY = scale
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
-                    }
+                modifier = Modifier.fillMaxSize()
             )
 
-            val defaultStroke = remember { Stroke(width = 1f) }
-            val selectedStroke = remember { Stroke(width = 3f) }
+            val defaultStroke = remember { Stroke(width = 2f) }
+            val selectedStroke = remember { Stroke(width = 4f) }
 
             Canvas(
                 modifier = Modifier
@@ -231,9 +223,11 @@ fun HexCanvasScreen(
                                 
                                 translate(center.x, center.y) {
                                     if (userHex != null) {
-                                        drawPath(basePath, Color(userHex.color.toInt()))
+                                        drawPath(basePath, Color(userHex.color.toInt()).copy(alpha = 0.85f))
+                                        drawPath(basePath, Color.White.copy(alpha = 0.5f), style = defaultStroke)
                                     } else {
-                                        drawPath(basePath, borderColor, style = defaultStroke)
+                                        drawPath(basePath, Color.Black.copy(alpha = 0.35f))
+                                        drawPath(basePath, Color.White.copy(alpha = 0.4f), style = defaultStroke)
                                     }
                                     
                                     if (isSelected) {
