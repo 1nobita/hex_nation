@@ -43,7 +43,7 @@ fun HexCanvasScreen(
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset(200f, 200f)) }
-    val hexSize = 35f
+    val hexSize = 70f
     val basePath = remember(hexSize) { HexMath.getBaseHexagonPath(hexSize * 0.92f) }
     
     val hexMap = remember(hexagons) {
@@ -137,7 +137,7 @@ fun HexCanvasScreen(
                     .fillMaxSize()
                     .pointerInput("transform") {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(0.2f, 5f)
+                            scale = (scale * zoom).coerceIn(0.4f, 5f)
                             offset += pan
                         }
                     }
