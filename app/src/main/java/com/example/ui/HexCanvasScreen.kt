@@ -139,13 +139,19 @@ fun HexCanvasScreen(
                 .background(bgCanvas)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
         ) {
+            val defaultStroke = remember { Stroke(width = 1f) }
+            val selectedStroke = remember { Stroke(width = 3f) }
+
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(0.4f, 5f)
-                            offset += pan
+                            scale = (scale * zoom).coerceIn(0.8f, 5f)
+                            offset = Offset(
+                                (offset.x + pan.x).coerceIn(-10000f, 10000f),
+                                (offset.y + pan.y).coerceIn(-10000f, 10000f)
+                            )
                         }
                     }
                     .pointerInput(Unit) {
@@ -168,9 +174,6 @@ fun HexCanvasScreen(
                 val endX = (width - offset.x) / scale
                 val endY = (height - offset.y) / scale
                 
-                val defaultStroke = Stroke(width = 1f)
-                val selectedStroke = Stroke(width = 3f)
-
                 translate(offset.x, offset.y) {
                     scale(scale, scale, Offset.Zero) {
                         val rowHeight = hexSize * 1.5f
