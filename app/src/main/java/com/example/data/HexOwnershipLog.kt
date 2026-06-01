@@ -7,14 +7,6 @@ import androidx.room.Index
 
 @Entity(
     tableName = "hex_ownership_logs",
-    foreignKeys = [
-        ForeignKey(
-            entity = Hexagon::class,
-            parentColumns = ["nationId", "q", "r"],
-            childColumns = ["nationId", "q", "r"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
     indices = [
         Index("nationId", "q", "r")
     ]

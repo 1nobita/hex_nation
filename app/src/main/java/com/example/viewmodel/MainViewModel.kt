@@ -38,10 +38,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _hexagons = MutableStateFlow<List<Hexagon>>(emptyList())
     val hexagons: StateFlow<List<Hexagon>> = _hexagons.asStateFlow()
+
+    private val _selectedHexLogs = MutableStateFlow<List<HexOwnershipLog>>(emptyList())
+    val selectedHexLogs: StateFlow<List<HexOwnershipLog>> = _selectedHexLogs.asStateFlow()
     
     private var hexJob: Job? = null
     private var profileJob: Job? = null
     private var ownedHexJob: Job? = null
+    private var logJob: Job? = null
+    
+    fun observeHexLogs(q: Int, r: Int) {
+        val nation = _currentNation.value ?: return
+        logJob?.cancel()
+        logJob = viewModelScope.launch {
+            repository.getHexOwnershipLogs(nation, q, r).collectLatest { logs ->
+                _selectedHexLogs.value = logs
+            }
+        }
+    }
 
     fun login(email: String) {
         _currentUser.value = email

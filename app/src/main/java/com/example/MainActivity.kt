@@ -93,10 +93,15 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
     composable("canvas") {
       val currentNation by viewModel.currentNation.collectAsStateWithLifecycle()
       val hexagons by viewModel.hexagons.collectAsStateWithLifecycle()
+      val logs by viewModel.selectedHexLogs.collectAsStateWithLifecycle()
       
       HexCanvasScreen(
         nationName = currentNation ?: "Unknown",
         hexagons = hexagons,
+        logs = logs,
+        onHexSelected = { q, r ->
+          viewModel.observeHexLogs(q, r)
+        },
         onPurchaseAction = { q, r, color ->
           viewModel.purchaseHexagon(q, r, color)
         },

@@ -34,10 +34,14 @@ import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.pow
 
+import com.example.data.HexOwnershipLog
+
 @Composable
 fun HexCanvasScreen(
     nationName: String,
     hexagons: List<Hexagon>,
+    logs: List<HexOwnershipLog>,
+    onHexSelected: (Int, Int) -> Unit,
     onPurchaseAction: (Int, Int, Long) -> Unit,
     onBack: () -> Unit
 ) {
@@ -147,10 +151,14 @@ fun HexCanvasScreen(
                     .fillMaxSize()
                     .pointerInput(Unit) {
                         detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(0.8f, 5f)
+                            val newScale = (scale * zoom)
+                            scale = if (newScale.isNaN()) scale else newScale.coerceIn(0.8f, 5f)
+                            
+                            val newX = offset.x + pan.x
+                            val newY = offset.y + pan.y
                             offset = Offset(
-                                (offset.x + pan.x).coerceIn(-10000f, 10000f),
-                                (offset.y + pan.y).coerceIn(-10000f, 10000f)
+                                if (newX.isNaN()) offset.x else newX.coerceIn(-10000f, 10000f),
+                                if (newY.isNaN()) offset.y else newY.coerceIn(-10000f, 10000f)
                             )
                         }
                     }
@@ -162,12 +170,14 @@ fun HexCanvasScreen(
                             selectedQ = hexCoord.q
                             selectedR = hexCoord.r
                             hasSelection = true
+                            onHexSelected(hexCoord.q, hexCoord.r)
                         }
                     }
             ) {
                 val width = size.width
                 val height = size.height
                 if (width.isNaN() || height.isNaN() || width <= 0f || height <= 0f) return@Canvas
+                if (offset.x.isNaN() || offset.y.isNaN() || scale.isNaN() || scale <= 0f) return@Canvas
 
                 val startX = (-offset.x) / scale
                 val startY = (-offset.y) / scale
@@ -266,10 +276,39 @@ fun HexCanvasScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("+10% Next", color = Color(0xFF00FF00), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
+                            if (existingHex != null) {
+                                Text("Owned by: ${existingHex.ownerId}", color = Color(0xFFEADDFF), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                            }
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text("AVAILABILITY LOCK", color = Color(0xFFCAC4D0), fontSize = 10.sp)
                             Text("14:22:09", color = Color(0xFFFFB4AB), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    if (logs.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("OWNERSHIP HISTORY", color = Color(0xFFCAC4D0), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 120.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            logs.take(3).forEach { log ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(statsBg, RoundedCornerShape(8.dp))
+                                        .padding(8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(log.ownerId, color = textPrimary, fontSize = 12.sp)
+                                    Text("${log.durationSeconds}s", color = accentPurple, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                     
