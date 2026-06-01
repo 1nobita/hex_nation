@@ -36,6 +36,12 @@ import kotlin.math.pow
 
 import com.example.data.HexOwnershipLog
 
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
+import coil.compose.AsyncImage
+import com.example.data.FULL_NATIONS_LIST
+import java.net.URLEncoder
+
 @Composable
 fun HexCanvasScreen(
     nationName: String,
@@ -143,6 +149,26 @@ fun HexCanvasScreen(
                 .background(bgCanvas)
                 .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
         ) {
+            val nationInfo = remember(nationName) { FULL_NATIONS_LIST.find { it.name == nationName } }
+            val iconicPlace = nationInfo?.iconicPlace ?: "Landscape"
+            val prompt = "$iconicPlace, $nationName, beautiful iconic professional photography"
+            val imageUrl = remember(prompt) { "https://image.pollinations.ai/prompt/${URLEncoder.encode(prompt, "UTF-8")}" }
+            
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Background",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationX = offset.x
+                        translationY = offset.y
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                    }
+            )
+
             val defaultStroke = remember { Stroke(width = 1f) }
             val selectedStroke = remember { Stroke(width = 3f) }
 
