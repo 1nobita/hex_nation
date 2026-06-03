@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -153,29 +154,14 @@ fun HexCanvasScreen(
             val nationInfo = remember(nationName) { FULL_NATIONS_LIST.find { it.name == nationName } }
             val iconicPlace = nationInfo?.iconicPlace ?: "Landscape"
             val prompt = "$iconicPlace, $nationName, beautiful iconic professional photography"
-            val imageUrl = remember(prompt) { "https://image.pollinations.ai/prompt/${URLEncoder.encode(prompt, "UTF-8")}" }
+            val imageUrl = remember(prompt) { "https://image.pollinations.ai/prompt/${java.net.URLEncoder.encode(prompt, "UTF-8")}" }
             
-            val context = androidx.compose.ui.platform.LocalContext.current
-            var imageBitmap by remember(imageUrl) { androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
-            
-            androidx.compose.runtime.LaunchedEffect(imageUrl) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    try {
-                        val request = coil.request.ImageRequest.Builder(context)
-                            .data(imageUrl)
-                            .allowHardware(false)
-                            .build()
-                        val loader = coil.ImageLoader(context)
-                        val result = loader.execute(request)
-                        val drawable = result.drawable
-                        if (drawable is android.graphics.drawable.BitmapDrawable) {
-                            imageBitmap = drawable.bitmap.asImageBitmap()
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
+            coil.compose.AsyncImage(
+                model = imageUrl,
+                contentDescription = "Nation Background",
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().alpha(0.4f)
+            )
 
             val defaultStroke = remember { Stroke(width = 3f) }
             val selectedStroke = remember { Stroke(width = 6f) }
@@ -218,48 +204,6 @@ fun HexCanvasScreen(
                 val endX = (width - offset.x) / scale
                 val endY = (height - offset.y) / scale
                 
-                if (imageBitmap != null) {
-                    val bmp = imageBitmap!!
-                    val gridWidth = 1000 * hexSize * HexMath.SQRT_3
-                    val gridHeight = 1000 * hexSize * 1.5f
-                    
-                    val gridScreenLeft = offset.x
-                    val gridScreenTop = offset.y
-                    val gridScreenRight = offset.x + gridWidth * scale
-                    val gridScreenBottom = offset.y + gridHeight * scale
-                    
-                    val visibleDstRect = androidx.compose.ui.unit.IntRect(
-                        left = maxOf(0f, gridScreenLeft).toInt(),
-                        top = maxOf(0f, gridScreenTop).toInt(),
-                        right = minOf(width, gridScreenRight).toInt(),
-                        bottom = minOf(height, gridScreenBottom).toInt()
-                    )
-                    
-                    if (visibleDstRect.width > 0 && visibleDstRect.height > 0) {
-                        val srcLeft = (((visibleDstRect.left - gridScreenLeft) / (gridWidth * scale)) * bmp.width).toInt()
-                        val srcTop = (((visibleDstRect.top - gridScreenTop) / (gridHeight * scale)) * bmp.height).toInt()
-                        val srcRight = (((visibleDstRect.right - gridScreenLeft) / (gridWidth * scale)) * bmp.width).toInt()
-                        val srcBottom = (((visibleDstRect.bottom - gridScreenTop) / (gridHeight * scale)) * bmp.height).toInt()
-                        
-                        val visibleSrcRect = androidx.compose.ui.unit.IntRect(
-                            left = srcLeft.coerceIn(0, bmp.width),
-                            top = srcTop.coerceIn(0, bmp.height),
-                            right = srcRight.coerceIn(0, bmp.width),
-                            bottom = srcBottom.coerceIn(0, bmp.height)
-                        )
-                        
-                        if (visibleSrcRect.width > 0 && visibleSrcRect.height > 0) {
-                            drawImage(
-                                image = bmp,
-                                srcOffset = androidx.compose.ui.unit.IntOffset(visibleSrcRect.left, visibleSrcRect.top),
-                                srcSize = androidx.compose.ui.unit.IntSize(visibleSrcRect.width, visibleSrcRect.height),
-                                dstOffset = androidx.compose.ui.unit.IntOffset(visibleDstRect.left, visibleDstRect.top),
-                                dstSize = androidx.compose.ui.unit.IntSize(visibleDstRect.width, visibleDstRect.height)
-                            )
-                        }
-                    }
-                }
-
                 val rowHeight = hexSize * 1.5f
                 val colWidth = hexSize * HexMath.SQRT_3
                 
